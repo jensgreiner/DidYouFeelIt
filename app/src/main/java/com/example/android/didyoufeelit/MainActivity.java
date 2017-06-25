@@ -15,9 +15,12 @@
  */
 package com.example.android.didyoufeelit;
 
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.widget.TextView;
+
+import static com.example.android.didyoufeelit.Utils.fetchEarthquakeData;
 
 /**
  * Displays the perceived strength of a single earthquake event based on responses from people who
@@ -34,11 +37,11 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // Perform the HTTP request for earthquake data and process the response.
-        Event earthquake = Utils.fetchEarthquakeData(USGS_REQUEST_URL);
-
-        // Update the information displayed to the user.
-        updateUi(earthquake);
+        // Create an {@link AsyncTask} to perform HTTP request to the given URL
+        // on a background thread. When the result it received on the main UI thread,
+        // then update the UI.
+        NetworkRequestTask task = new NetworkRequestTask();
+        task.execute(USGS_REQUEST_URL);
     }
 
     /**
@@ -53,5 +56,45 @@ public class MainActivity extends AppCompatActivity {
 
         TextView magnitudeTextView = (TextView) findViewById(R.id.perceived_magnitude);
         magnitudeTextView.setText(earthquake.perceivedStrength);
+    }
+
+    private class NetworkRequestTask extends AsyncTask<String, Void, Event> {
+        /**
+         * Override this method to perform a computation on a background thread. The
+         * specified parameters are the parameters passed to {@link #execute}
+         * by the caller of this task.
+         * <p>
+         * This method can call {@link #publishProgress} to publish updates
+         * on the UI thread.
+         *
+         * @param urls The parameters of the task.
+         * @return A result, defined by the subclass of this task.
+         * @see #onPreExecute()
+         * @see #onPostExecute
+         * @see #publishProgress
+         */
+        @Override
+        protected Event doInBackground(String... urls) {
+            // Perform the HTTP request for earthquake data and process the response.
+            Event earthquake = fetchEarthquakeData(urls[0]);
+            return earthquake;
+        }
+
+        /**
+         * <p>Runs on the UI thread after {@link #doInBackground}. The
+         * specified result is the value returned by {@link #doInBackground}.</p>
+         * <p>
+         * <p>This method won't be invoked if the task was cancelled.</p>
+         *
+         * @param earthquake The result of the operation computed by {@link #doInBackground}.
+         * @see #onPreExecute
+         * @see #doInBackground
+         * @see #onCancelled(Object)
+         */
+        @Override
+        protected void onPostExecute(Event earthquake) {
+            // Update the information displayed to the user.
+            updateUi(earthquake);
+        }
     }
 }
